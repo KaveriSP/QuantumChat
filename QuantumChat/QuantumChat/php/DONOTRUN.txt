@@ -1,0 +1,53 @@
+<?php
+// MySQL database credentials
+$servername = "localhost";
+$username = "root";
+$password = "";
+$database = "quantumchat";
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $database);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// SQL query to select all rows from the messages table
+$sql = "SELECT msg_id, msg FROM messages where msg_id<23";
+$result = $conn->query($sql);
+
+// Check if any rows are returned
+if ($result->num_rows > 0) {
+    // Loop through each row
+    while ($row = $result->fetch_assoc()) {
+        // Get the value of the msg column
+        $msg_id = $row['msg_id'];
+        $msg = $row['msg'];
+
+        // Execute the Python script to update the message
+        $python_command = "python NTRU.py -k NTRU_key -eS \"".$msg."\" -T";
+        echo $python_command."<br>";
+        $output = shell_exec($python_command);
+        echo $output;
+
+        // Check if the Python script executed successfully
+        if ($output !== null) {
+            // Update the msg column with the output of the Python script
+            $update_sql = "UPDATE messages SET msg = '$output' WHERE msg_id = $msg_id";
+            if ($conn->query($update_sql) === TRUE) {
+                echo "Message with ID $msg_id updated successfully.<br>";
+            } else {
+                echo "Error updating message with ID $msg_id: " . $conn->error . "<br>";
+            }
+        } else {
+            echo "Error executing Python script for message with ID $msg_id.<br>";
+        }
+    }
+} else {
+    echo "No messages found in the database.<br>";
+}
+
+// Close connection
+$conn->close();
+?>
